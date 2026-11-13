@@ -1,4 +1,4 @@
-name: Build Multi-Platform
+name: Build Multi-Platform with Nuitka
 
 on:
   push:
@@ -15,19 +15,17 @@ jobs:
         include:
           - os: windows-latest
             artifact_name: sudoku-windows
-            separator: ';'
-            extension: '.exe'
+            # В Windows Nuitka создаст .exe
           - os: macos-latest
             artifact_name: sudoku-macos
-            separator: ':'
-            extension: '.app'
+            # В macOS Nuitka создаст .app бандл
           - os: ubuntu-latest
             artifact_name: sudoku-linux
-            separator: ':'
-            extension: ''
+            # В Linux Nuitka создаст бинарный файл
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -37,16 +35,39 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install PyQt6 pyinstaller
+        pip install PyQt6
 
-    - name: Build with PyInstaller
-      # Используем переменную separator из матрицы для правильного разделителя в --add-data
-      run: |
-        pyinstaller --onefile --windowed --add-data "fonts${{ matrix.separator }}fonts" sudoku_slavonic.py
+    - name: Build with Nuitka
+      uses: Nuitka/Nuitka-Action@main
+      with:
+        nuitka-version: main
+        script-name: sudoku_slavonic.py
+        # mode: app (для GUI-приложений, создает .app на macOS)[reference:2]
+        mode: app
+        # Аналог --windows-disable-console
+        windows-disable-console: true
+        # Включаем плагин для PyQt6
+        enable-plugins: pyqt6
+        # Аналог --onefile
+        onefile: true
+        # Копируем папку со шрифтами внутрь сборки
+        include-data-dir: 'fonts=fonts'
+        # Исключаем лишние модули (аналог ваших параметров для Nuitka)
+        nofollow-import-to: |
+          tkinter
+          unittest
+          email
+          http
+          xml
+          pydoc
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        # На macOS PyInstaller создаёт папку dist/sudoku_slavonic.app, на других — файл
-        path: dist/sudoku_slavonic${{ matrix.extension }}
+        # Пути, куда Nuitka складывает результаты сборки на разных ОС[reference:3]
+        path: |
+          build/*.exe
+          build/*.bin
+          build/*.app/**/*
+        include-hidden-files: true
