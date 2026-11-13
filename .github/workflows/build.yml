@@ -63,7 +63,8 @@ jobs:
           http
           xml
           pydoc
-        # Создаем AppImage для Linux
+        # --- НОВЫЕ ПАРАМЕТРЫ ДЛЯ LINUX INSTALLER ---
+        product-name: "SudokuSlavonic"
         linux-create-installer: appimage
 
     # --- Архивация macOS приложения в ZIP ---
