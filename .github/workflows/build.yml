@@ -3,8 +3,12 @@ name: Build Multi-Platform with Nuitka
 on:
   push:
     tags:
-      - 'v*' # Запуск при пуше тега, например v1.0
+      - 'v*' # Запуск при пуше тега (например, v1.0.0)
   workflow_dispatch: # Позволяет запускать сборку вручную
+
+# Даем экшену права на создание релизов
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -15,13 +19,10 @@ jobs:
         include:
           - os: windows-latest
             artifact_name: sudoku-windows
-            # В Windows Nuitka создаст .exe
           - os: macos-latest
             artifact_name: sudoku-macos
-            # В macOS Nuitka создаст .app бандл
           - os: ubuntu-latest
             artifact_name: sudoku-linux
-            # В Linux Nuitka создаст бинарный файл
 
     steps:
     - name: Checkout repository
@@ -42,17 +43,11 @@ jobs:
       with:
         nuitka-version: main
         script-name: sudoku_slavonic.py
-        # mode: app (для GUI-приложений, создает .app на macOS)[reference:2]
         mode: app
-        # Аналог --windows-disable-console
         windows-disable-console: true
-        # Включаем плагин для PyQt6
         enable-plugins: pyqt6
-        # Аналог --onefile
         onefile: true
-        # Копируем папку со шрифтами внутрь сборки
         include-data-dir: 'fonts=fonts'
-        # Исключаем лишние модули (аналог ваших параметров для Nuitka)
         nofollow-import-to: |
           tkinter
           unittest
@@ -61,13 +56,32 @@ jobs:
           xml
           pydoc
 
+    # --- АРХИВАЦИЯ ДЛЯ MACOS (чтобы .app не терял структуру при скачивании) ---
+    - name: Zip macOS App
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd build
+        ditto -c -k --sequesterRsrc --keepParent sudoku_slavonic.app sudoku_slavonic_macos.zip
+
+    # --- ЗАГРУЗКА АРТЕФАКТОВ (как и раньше) ---
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        # Пути, куда Nuitka складывает результаты сборки на разных ОС[reference:3]
         path: |
           build/*.exe
           build/*.bin
-          build/*.app/**/*
+          build/*.zip
         include-hidden-files: true
+
+    # --- СОЗДАНИЕ РЕЛИЗА И ПРИКРЕПЛЕНИЕ ФАЙЛОВ ---
+    - name: Create Release and Upload Assets
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/v') # Запускается только если это тег
+      with:
+        draft: true # Создает черновик релиза, который вы сможете проверить и опубликовать
+        generate_release_notes: true # Автоматически генерирует описание изменений
+        files: |
+          build/sudoku_slavonic.exe
+          build/sudoku_slavonic.bin
+          build/sudoku_slavonic_macos.zip
