@@ -3,7 +3,7 @@ name: Build Multi-Platform with Nuitka
 on:
   push:
     tags:
-      - 'v*' # Запуск при пуше тега (например, v1.0.1)
+      - 'v*' # Запуск при пуше тега (например, v1.0)
   workflow_dispatch: # Позволяет запускать сборку вручную
 
 # Даем экшену права на создание релизов и загрузку файлов
@@ -40,7 +40,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libfuse2
 
-    # --- Установка Python-зависимостей (PySide6 вместо PyQt6) ---
+    # --- Установка Python-зависимостей (PySide6) ---
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
@@ -63,9 +63,15 @@ jobs:
           http
           xml
           pydoc
-        # --- НОВЫЕ ПАРАМЕТРЫ ДЛЯ LINUX INSTALLER ---
+        
+        # --- Полный набор метаданных для Linux-инсталлятора (AppImage) ---
+        company-name: "Dmitry Grebenev"
         product-name: "SudokuSlavonic"
         product-version: "1.0.0"
+        file-version: "1.0.0"
+        file-description: "Sudoku game with Church Slavonic numerals"
+        copyright: "Copyright (C) 2026 Dmitry Grebenev"
+        
         linux-create-installer: appimage
 
     # --- Архивация macOS приложения в ZIP ---
