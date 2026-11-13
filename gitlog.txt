@@ -1,0 +1,71 @@
+commit 62e7fff7319cb2e9e8f49cb66f99626fcca315d0
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 21:18:22 2026 +0300
+
+    hot fix
+
+commit 9f9533646529c2323b39994be4ba6c8ca2bda2d8
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 21:15:09 2026 +0300
+
+    Fix: Migrate to PySide6 and add AppImage support
+
+commit c6299a3edefd177401fc921fe6a145efa6077de1
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 21:11:18 2026 +0300
+
+    release
+
+commit e753a981027c3647d4f84433a1cf95ed3ab2214d
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 21:05:06 2026 +0300
+
+    release
+
+commit be64ac8eb4bd2d4a03244f3c0f259eb41a170a4f
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 21:00:40 2026 +0300
+
+    release
+
+commit 9328345d70f290d5a7db428c8f556458852d873a
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 20:56:17 2026 +0300
+
+    release
+
+commit 7782f7b098d4eb30c2f787c0e508d3293f050009
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 20:51:49 2026 +0300
+
+    nuitka workflow
+
+commit 59f8689b00dd30e7654fa58f3f551c9c019274e1
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 20:46:57 2026 +0300
+
+    last fix?
+
+commit 63e9c637ac2fe9697dd4740e2739852726590be3
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 20:29:36 2026 +0300
+
+    hot fixes w names
+
+commit 05f28e4bec88740fc1ce6591f53845092ab4d285
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 20:27:51 2026 +0300
+
+    renaming
+
+commit 2b2205f74243873721c8e57b7eb9e847eca49e74
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 20:23:49 2026 +0300
+
+    first
+
+commit a4e3697734ba85aafc0d116b4e5616da2dafc3f8
+Author: Dmitry Grebenev <d-grebenev@mail.ru>
+Date:   Fri Nov 13 20:23:32 2026 +0300
+
+    first commit
