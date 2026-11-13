@@ -65,6 +65,7 @@ jobs:
           pydoc
         # --- НОВЫЕ ПАРАМЕТРЫ ДЛЯ LINUX INSTALLER ---
         product-name: "SudokuSlavonic"
+        product-version: "1.0.0"
         linux-create-installer: appimage
 
     # --- Архивация macOS приложения в ZIP ---
