@@ -3,10 +3,9 @@ name: Build Multi-Platform with Nuitka
 on:
   push:
     tags:
-      - 'v*' # Запуск при пуше тега (например, v1.0.0)
-  workflow_dispatch: # Позволяет запускать сборку вручную
+      - 'v*'
+  workflow_dispatch:
 
-# Даем экшену права на создание релизов
 permissions:
   contents: write
 
@@ -43,10 +42,13 @@ jobs:
       with:
         nuitka-version: main
         script-name: sudoku_slavonic.py
+        # --- ИСПРАВЛЕНИЕ ---
+        # mode: app заменяет устаревший onefile и создает .app на macOS
         mode: app
-        windows-disable-console: true
+        # windows-console-mode заменяет устаревший windows-disable-console
+        windows-console-mode: disable
+        # --------------------
         enable-plugins: pyqt6
-        onefile: true
         include-data-dir: 'fonts=fonts'
         nofollow-import-to: |
           tkinter
@@ -56,14 +58,12 @@ jobs:
           xml
           pydoc
 
-    # --- АРХИВАЦИЯ ДЛЯ MACOS (чтобы .app не терял структуру при скачивании) ---
     - name: Zip macOS App
       if: matrix.os == 'macos-latest'
       run: |
         cd build
         ditto -c -k --sequesterRsrc --keepParent sudoku_slavonic.app sudoku_slavonic_macos.zip
 
-    # --- ЗАГРУЗКА АРТЕФАКТОВ (как и раньше) ---
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
@@ -74,13 +74,12 @@ jobs:
           build/*.zip
         include-hidden-files: true
 
-    # --- СОЗДАНИЕ РЕЛИЗА И ПРИКРЕПЛЕНИЕ ФАЙЛОВ ---
     - name: Create Release and Upload Assets
       uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/v') # Запускается только если это тег
+      if: startsWith(github.ref, 'refs/tags/v')
       with:
-        draft: true # Создает черновик релиза, который вы сможете проверить и опубликовать
-        generate_release_notes: true # Автоматически генерирует описание изменений
+        draft: true
+        generate_release_notes: true
         files: |
           build/sudoku_slavonic.exe
           build/sudoku_slavonic.bin
