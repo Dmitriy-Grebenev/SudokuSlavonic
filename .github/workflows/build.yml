@@ -19,10 +19,13 @@ jobs:
         include:
           - os: windows-latest
             artifact_name: sudoku-windows
+            build_mode: app
           - os: macos-latest
             artifact_name: sudoku-macos
+            build_mode: app
           - os: ubuntu-latest
             artifact_name: sudoku-linux
+            build_mode: app-dist # Для AppImage требуется app-dist (или standalone)
 
     steps:
     - name: Checkout repository
@@ -52,7 +55,8 @@ jobs:
       with:
         nuitka-version: main
         script-name: sudoku_slavonic.py
-        mode: app
+        # Используем режим из матрицы (app для Win/Mac, app-dist для Linux)
+        mode: ${{ matrix.build_mode }}
         windows-console-mode: disable
         enable-plugins: pyside6
         include-data-dir: 'fonts=fonts'
@@ -64,7 +68,7 @@ jobs:
           xml
           pydoc
         
-        # --- Полный набор метаданных для Linux-инсталлятора (AppImage) ---
+        # --- Метаданные для Linux-инсталлятора (AppImage) ---
         company-name: "Dmitry Grebenev"
         product-name: "SudokuSlavonic"
         product-version: "1.0.0"
@@ -72,6 +76,7 @@ jobs:
         file-description: "Sudoku game with Church Slavonic numerals"
         copyright: "Copyright (C) 2026 Dmitry Grebenev"
         
+        # Создаем AppImage для Linux
         linux-create-installer: appimage
 
     # --- Архивация macOS приложения в ZIP ---
@@ -88,9 +93,9 @@ jobs:
         name: ${{ matrix.artifact_name }}
         path: |
           build/*.exe
-          build/*.bin
           build/*.zip
           build/*.AppImage
+          build/sudoku_slavonic.dist/**/*
         include-hidden-files: true
 
     # --- Создание черновика релиза и прикрепление файлов ---
@@ -100,8 +105,8 @@ jobs:
       with:
         draft: true
         generate_release_notes: true
+        # Прикрепляем файлы для всех платформ
         files: |
           build/sudoku_slavonic.exe
-          build/sudoku_slavonic.bin
           build/sudoku_slavonic_macos.zip
           build/*.AppImage
