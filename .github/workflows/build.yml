@@ -42,12 +42,8 @@ jobs:
       with:
         nuitka-version: main
         script-name: sudoku_slavonic.py
-        # --- ИСПРАВЛЕНИЕ ---
-        # mode: app заменяет устаревший onefile и создает .app на macOS
         mode: app
-        # windows-console-mode заменяет устаревший windows-disable-console
         windows-console-mode: disable
-        # --------------------
         enable-plugins: pyqt6
         include-data-dir: 'fonts=fonts'
         nofollow-import-to: |
@@ -57,6 +53,9 @@ jobs:
           http
           xml
           pydoc
+        # --- НОВАЯ ОПЦИЯ ДЛЯ LINUX ---
+        # Создаёт AppImage после успешной сборки
+        linux-create-installer: appimage
 
     - name: Zip macOS App
       if: matrix.os == 'macos-latest'
@@ -72,6 +71,7 @@ jobs:
           build/*.exe
           build/*.bin
           build/*.zip
+          build/*.AppImage
         include-hidden-files: true
 
     - name: Create Release and Upload Assets
@@ -84,3 +84,4 @@ jobs:
           build/sudoku_slavonic.exe
           build/sudoku_slavonic.bin
           build/sudoku_slavonic_macos.zip
+          build/sudoku_slavonic*.AppImage
