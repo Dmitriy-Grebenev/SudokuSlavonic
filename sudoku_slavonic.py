@@ -1,13 +1,13 @@
 import sys
 import random
 import os
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QGridLayout, QVBoxLayout,
     QHBoxLayout, QPushButton, QComboBox, QLabel, QLineEdit, QMessageBox,
     QFrame
 )
-from PyQt6.QtGui import QFontDatabase, QFont, QRegularExpressionValidator
-from PyQt6.QtCore import Qt, QRegularExpression
+from PySide6.QtGui import QFontDatabase, QFont, QRegularExpressionValidator
+from PySide6.QtCore import Qt, QRegularExpression
 
 # ======================================================================
 # НАСТРОЙКИ ВНЕШНЕГО ВИДА
