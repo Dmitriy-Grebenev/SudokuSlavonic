@@ -3,20 +3,18 @@ import random
 import os
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QGridLayout, QVBoxLayout,
-    QHBoxLayout, QPushButton, QComboBox, QLabel, QLineEdit, QMessageBox,
-    QFrame
+    QHBoxLayout, QBoxLayout, QPushButton, QComboBox, QLabel, QLineEdit, QMessageBox,
+    QFrame, QSizePolicy, QSpacerItem
 )
-from PySide6.QtGui import QFontDatabase, QFont, QRegularExpressionValidator
+from PySide6.QtGui import QFontDatabase, QFont, QRegularExpressionValidator, QGuiApplication
 from PySide6.QtCore import Qt, QRegularExpression
 
 # ======================================================================
 # НАСТРОЙКИ ВНЕШНЕГО ВИДА
 # ======================================================================
 FONT_FAMILY = "Driagwa"
-CELL_SIZE = 80
-FONT_SIZE_CELL = 46
-FONT_SIZE_TITLE = 72
-FONT_SIZE_UI = 36
+FONT_SIZE_TITLE = 52
+FONT_SIZE_UI = 24
 
 # ----------------------------------------------------------------------
 # 1. Логика генерации судоку
@@ -70,23 +68,14 @@ def generate_puzzle(difficulty="medium"):
 # ----------------------------------------------------------------------
 UNITS = {1: "а҃", 2: "в҃", 3: "г҃", 4: "д҃", 5: "є҃",
          6: "ѕ҃", 7: "з҃", 8: "и҃", 9: "ѳ҃"}
-TENS = {10: "і҃", 20: "к҃", 30: "л҃", 40: "м҃", 50: "н҃",
-        60: "ѯ҃", 70: "ѻ҃", 80: "п҃", 90: "ч҃"}
-HUNDREDS = {100: "р҃", 200: "с҃", 300: "т҃", 400: "у҃",
-            500: "ф҃", 600: "х҃", 700: "ѱ҃", 800: "ѿ҃", 900: "ц҃"}
 
 def arabic_to_slavonic(num):
     if num == 0: return ""
     if 1 <= num <= 9: return UNITS[num]
-    if 10 <= num <= 19: return UNITS[num % 10] + TENS[10]
-    if 20 <= num <= 99:
-        tens = (num // 10) * 10
-        units = num % 10
-        return TENS[tens] + (UNITS[units] if units else "")
     return str(num)
 
 def slavonic_to_arabic(text):
-    text = text.strip()
+    text = text.strip().lower()
     if not text: return None
     if text in "123456789": return int(text)
     for n, letter in UNITS.items():
@@ -126,11 +115,10 @@ class SudokuCell(QLineEdit):
         self.is_fixed = is_fixed
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setMaxLength(2) 
-        self.setFixedSize(CELL_SIZE, CELL_SIZE)
+        self.setMinimumSize(15, 15)
         
         regex = QRegularExpression("[1-9а-ѳА-Ѳ҃]")
         self.setValidator(QRegularExpressionValidator(regex, self))
-        self.setFont(QFont(FONT_FAMILY, FONT_SIZE_CELL))
         self.textChanged.connect(self.on_text_changed)
 
     def on_text_changed(self, text):
@@ -149,11 +137,62 @@ class SudokuCell(QLineEdit):
                 return
         super().keyPressEvent(event)
 
+class AspectRatioWidget(QWidget):
+    """Заставляет дочерний виджет оставаться идеально квадратным."""
+    def __init__(self, widget, parent=None):
+        super().__init__(parent)
+        self.widget = widget
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(widget)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        size = min(self.width(), self.height())
+        size = max(200, size - 10)
+        self.widget.setFixedSize(size, size)
+
+class SudokuGridFrame(QFrame):
+    """Адаптивное игровое поле с автоматическим размером шрифта."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.layout = QGridLayout(self)
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(5, 5, 5, 5)
+        
+        self.cells = [[None for _ in range(9)] for _ in range(9)]
+        for r in range(9):
+            for c in range(9):
+                cell = SudokuCell(r, c)
+                self.layout.addWidget(cell, r, c)
+                self.cells[r][c] = cell
+                
+        self.current_font_size = 0
+        
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        cell_size = self.width() / 9.0
+        font_size = max(10, int(cell_size * 0.55))
+        
+        if font_size != self.current_font_size:
+            self.current_font_size = font_size
+            font = QFont(FONT_FAMILY, font_size)
+            for r in range(9):
+                for c in range(9):
+                    self.cells[r][c].setFont(font)
+
 class SudokuWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Судоку · Славянская цифирь")
-        self.setFixedSize(850, 1000)
+        
+        # Стартовый размер (как раньше, но ограничен экраном)
+        screen = QGuiApplication.primaryScreen().availableGeometry()
+        w = min(850, int(screen.width() * 0.9))
+        h = min(1000, int(screen.height() * 0.9))
+        self.resize(w, h)
+        self.setMinimumSize(400, 500)
         
         self.current_theme = "light"
         self.solution_board = None
@@ -163,31 +202,39 @@ class SudokuWindow(QMainWindow):
         
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.main_layout = QVBoxLayout(self.central_widget)
-        self.main_layout.setContentsMargins(30, 20, 30, 30)
+        
+        # Главный слой
+        self.main_layout = QBoxLayout(QBoxLayout.Direction.TopToBottom, self.central_widget)
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(15)
         
-        # --- Верхняя панель с кнопкой темы в правом углу ---
+        # --- Игровое поле ---
+        self.grid_frame = SudokuGridFrame()
+        self.grid_wrapper = AspectRatioWidget(self.grid_frame)
+        
+        # --- Панель управления ---
+        self.controls_widget = QWidget()
+        self.controls_layout = QVBoxLayout(self.controls_widget)
+        self.controls_layout.setContentsMargins(0, 0, 0, 0)
+        self.controls_layout.setSpacing(10)
+        
         self.top_bar = QHBoxLayout()
         self.top_bar.addStretch()
-        
         self.theme_btn = QPushButton("🌙 Тёмная тема")
         self.theme_btn.setFont(QFont(FONT_FAMILY, FONT_SIZE_UI))
         self.theme_btn.clicked.connect(self.toggle_theme)
-        self.theme_btn.setFixedHeight(50)
+        self.theme_btn.setMinimumHeight(45)
         self.top_bar.addWidget(self.theme_btn)
+        self.controls_layout.addLayout(self.top_bar)
         
-        self.main_layout.addLayout(self.top_bar)
-        
-        # --- Заголовок ---
         self.title_label = QLabel("СУДОКУ")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.title_label.setFont(QFont(FONT_FAMILY, FONT_SIZE_TITLE, QFont.Weight.Bold))
-        self.main_layout.addWidget(self.title_label)
+        self.controls_layout.addWidget(self.title_label)
         
-        # --- Панель управления ---
-        self.control_layout = QHBoxLayout()
-        self.control_layout.setSpacing(15)
+        # Контейнер для кнопок (меняет ориентацию с горизонтальной на вертикальную)
+        self.button_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self.button_layout.setSpacing(10)
         
         self.difficulty_label = QLabel("Сложность:")
         self.difficulty_label.setFont(QFont(FONT_FAMILY, FONT_SIZE_UI))
@@ -196,55 +243,81 @@ class SudokuWindow(QMainWindow):
         self.difficulty_combo.addItems(["Лёгкий", "Средний", "Сложный"])
         self.difficulty_combo.setCurrentText("Средний")
         self.difficulty_combo.setFont(QFont(FONT_FAMILY, FONT_SIZE_UI))
+        self.difficulty_combo.setMinimumHeight(45)
         
         self.new_game_btn = QPushButton("Новая игра")
         self.new_game_btn.setFont(QFont(FONT_FAMILY, FONT_SIZE_UI))
         self.new_game_btn.clicked.connect(self.new_game)
+        self.new_game_btn.setMinimumHeight(45)
         
         self.check_btn = QPushButton("Проверить")
         self.check_btn.setFont(QFont(FONT_FAMILY, FONT_SIZE_UI))
         self.check_btn.clicked.connect(self.check_solution)
+        self.check_btn.setMinimumHeight(45)
         
-        self.control_layout.addWidget(self.difficulty_label)
-        self.control_layout.addWidget(self.difficulty_combo)
-        self.control_layout.addStretch()
-        self.control_layout.addWidget(self.new_game_btn)
-        self.control_layout.addWidget(self.check_btn)
-        self.main_layout.addLayout(self.control_layout)
+        # Распорка, которая работает по-разному в зависимости от ориентации
+        self.button_spacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         
-        # --- Сетка ---
-        self.grid_frame = QFrame()
-        self.grid_layout = QGridLayout(self.grid_frame)
-        self.grid_layout.setSpacing(0)
-        self.grid_layout.setContentsMargins(15, 15, 15, 15) 
+        self.button_layout.addWidget(self.difficulty_label)
+        self.button_layout.addWidget(self.difficulty_combo)
+        self.button_layout.addItem(self.button_spacer)
+        self.button_layout.addWidget(self.new_game_btn)
+        self.button_layout.addWidget(self.check_btn)
         
-        self.cells = [[None for _ in range(9)] for _ in range(9)]
-        for r in range(9):
-            for c in range(9):
-                cell = SudokuCell(r, c)
-                self.grid_layout.addWidget(cell, r, c)
-                self.cells[r][c] = cell
+        self.controls_layout.addLayout(self.button_layout)
+        self.controls_layout.addStretch() # Прижимает все наверх в вертикальном режиме
         
-        self.main_layout.addWidget(self.grid_frame)
+        # Инициализируем состояние
+        self.is_wide_mode = None
+        self.update_ui_mode(False)
         
         self.apply_theme()
         self.new_game()
 
+    def update_ui_mode(self, is_wide):
+        """Перестраивает интерфейс в зависимости от формы окна."""
+        if self.is_wide_mode == is_wide:
+            return
+        self.is_wide_mode = is_wide
+        
+        self.main_layout.removeWidget(self.controls_widget)
+        self.main_layout.removeWidget(self.grid_wrapper)
+        
+        if is_wide:
+            # РАСТЯНУТЫЙ РЕЖИМ (Альбомный / Фуллскрин)
+            # Судоку слева, кнопки справа вертикально
+            self.main_layout.setDirection(QBoxLayout.Direction.LeftToRight)
+            self.main_layout.addWidget(self.grid_wrapper, stretch=1)
+            self.main_layout.addWidget(self.controls_widget, stretch=0)
+            self.controls_widget.setMaximumWidth(400)
+            
+            self.button_layout.setDirection(QBoxLayout.Direction.TopToBottom)
+            self.button_spacer.changeSize(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        else:
+            # ОБЫЧНЫЙ РЕЖИМ (Портретный)
+            # Панель сверху, кнопки в один ряд
+            self.main_layout.setDirection(QBoxLayout.Direction.TopToBottom)
+            self.main_layout.addWidget(self.controls_widget, stretch=0)
+            self.main_layout.addWidget(self.grid_wrapper, stretch=1)
+            self.controls_widget.setMaximumWidth(16777215) # Снимаем ограничение ширины
+            
+            self.button_layout.setDirection(QBoxLayout.Direction.LeftToRight)
+            self.button_spacer.changeSize(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Если окно шире, чем выше (с коэффициентом) — переключаем режим
+        is_wide = self.width() > self.height() * 1.1
+        self.update_ui_mode(is_wide)
+
     def load_fonts(self):
         if not os.path.exists(self.font_dir):
             os.makedirs(self.font_dir)
-            print(f"Папка {self.font_dir} создана. Поместите в неё шрифт {FONT_FAMILY}.otf.")
             return
-        
         for font_file in os.listdir(self.font_dir):
             if font_file.lower().endswith(('.ttf', '.otf')):
                 font_path = os.path.join(self.font_dir, font_file)
-                font_id = QFontDatabase.addApplicationFont(font_path)
-                if font_id == -1:
-                    print(f"Не удалось загрузить шрифт: {font_path}")
-                else:
-                    families = QFontDatabase.applicationFontFamilies(font_id)
-                    print(f"Загружен шрифт: {font_file} -> {families}")
+                QFontDatabase.addApplicationFont(font_path)
 
     def toggle_theme(self):
         if self.current_theme == "light":
@@ -262,31 +335,18 @@ class SudokuWindow(QMainWindow):
         msg_box.setWindowTitle(title)
         msg_box.setText(text)
         
-        msg_box.setFont(QFont(FONT_FAMILY, FONT_SIZE_UI))
+        msg_box.setFont(QFont(FONT_FAMILY, 16))
         
         msg_box.setStyleSheet(f"""
-            QMessageBox {{
-                background-color: {t['bg_main']};
-                font-family: '{FONT_FAMILY}';
-            }}
-            QLabel {{
-                color: {t['text']};
-                font-size: {FONT_SIZE_UI}px;
-                font-family: '{FONT_FAMILY}';
-            }}
+            QMessageBox {{ background-color: {t['bg_main']}; font-family: '{FONT_FAMILY}'; }}
+            QLabel {{ color: {t['text']}; font-size: 16px; font-family: '{FONT_FAMILY}'; }}
             QPushButton {{
-                background-color: {t['btn_bg']};
-                color: {t['btn_text']};
-                border: 2px solid {t['border_thick']};
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-weight: bold;
-                font-size: {FONT_SIZE_UI}px;
+                background-color: {t['btn_bg']}; color: {t['btn_text']};
+                border: 2px solid {t['border_thick']}; border-radius: 6px;
+                padding: 8px 16px; font-weight: bold; font-size: 16px;
                 font-family: '{FONT_FAMILY}';
             }}
-            QPushButton:hover {{
-                background-color: {t['btn_hover']};
-            }}
+            QPushButton:hover {{ background-color: {t['btn_hover']}; }}
         """)
         msg_box.exec()
 
@@ -304,7 +364,6 @@ class SudokuWindow(QMainWindow):
             }}
             QComboBox::drop-down {{ border: none; }}
             
-            /* СТИЛИ ДЛЯ ВЫПАДАЮЩЕГО СПИСКА */
             QComboBox QAbstractItemView {{
                 background-color: {t['combo_bg']};
                 color: {t['combo_text']};
@@ -336,7 +395,7 @@ class SudokuWindow(QMainWindow):
         
         for r in range(9):
             for c in range(9):
-                cell = self.cells[r][c]
+                cell = self.grid_frame.cells[r][c]
                 
                 top = 5 if r % 3 == 0 else 1
                 left = 5 if c % 3 == 0 else 1
@@ -363,7 +422,6 @@ class SudokuWindow(QMainWindow):
                         border-left: {left}px solid {b_color_thick if left > 1 else b_color_thin};
                         border-bottom: {bottom}px solid {b_color_thick if bottom > 1 else b_color_thin};
                         border-right: {right}px solid {b_color_thick if right > 1 else b_color_thin};
-                        font-size: {FONT_SIZE_CELL}px;
                     }}
                     QLineEdit:focus {{
                         background-color: {t['bg_focus']};
@@ -378,7 +436,7 @@ class SudokuWindow(QMainWindow):
         
         for r in range(9):
             for c in range(9):
-                cell = self.cells[r][c]
+                cell = self.grid_frame.cells[r][c]
                 val = puzzle[r][c]
                 if val != 0:
                     cell.setText(arabic_to_slavonic(val))
@@ -389,6 +447,22 @@ class SudokuWindow(QMainWindow):
                     cell.setReadOnly(False)
                     cell.is_fixed = False
         self.apply_theme()
+        
+        print("\n=== НОВАЯ ИГРА ===")
+        print("Правильное решение (запомните его, чтобы проверить выигрыш):")
+        self.print_matrix(self.solution_board)
+
+    def print_matrix(self, matrix):
+        for r in range(9):
+            if r % 3 == 0 and r != 0:
+                print("-" * 21)
+            row_str = ""
+            for c in range(9):
+                if c % 3 == 0 and c != 0:
+                    row_str += "| "
+                row_str += f"{matrix[r][c]} "
+            print(row_str)
+        print()
 
     def check_solution(self):
         if self.solution_board is None:
@@ -398,7 +472,7 @@ class SudokuWindow(QMainWindow):
         empty_cells = []
         for r in range(9):
             for c in range(9):
-                text = self.cells[r][c].text().strip()
+                text = self.grid_frame.cells[r][c].text().strip()
                 if not text:
                     empty_cells.append((r, c))
                     continue
@@ -413,12 +487,20 @@ class SudokuWindow(QMainWindow):
             self.show_message(QMessageBox.Icon.Information, "Проверка", f"Заполнено не всё. Осталось ячеек: {len(empty_cells)}")
             return
         
+        print("\n=== ПРОВЕРКА РЕШЕНИЯ ===")
+        print("Ваше поле:")
+        self.print_matrix(user_board)
+        print("Правильное решение:")
+        self.print_matrix(self.solution_board)
+        
         for r in range(9):
             for c in range(9):
                 if user_board[r][c] != self.solution_board[r][c]:
+                    print(f"❌ ОШИБКА в ячейке ({r+1}, {c+1})! Ожидалось {self.solution_board[r][c]}, введено {user_board[r][c]}")
                     self.show_message(QMessageBox.Icon.Warning, "Проверка", f"Ошибка в ячейке ({r+1}, {c+1})!")
                     return
         
+        print("✅ ВЕРНО! Судоку решено.")
         self.show_message(QMessageBox.Icon.Information, "Поздравляем!", "Судоку решено верно! 🎉")
 
 if __name__ == "__main__":
